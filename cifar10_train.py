@@ -19,7 +19,7 @@ http://tensorflow.org/tutorials/deep_cnn/
 """
 from datetime import datetime
 import os.path
-import time
+import time #
 
 import tensorflow.python.platform
 from tensorflow.python.platform import gfile

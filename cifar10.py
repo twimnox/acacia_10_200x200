@@ -35,20 +35,25 @@ from tensorflow.python.platform import gfile
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 1, #era 128
+tf.app.flags.DEFINE_integer('batch_size', 128, #era 128
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('data_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_data',
                            """Path to the CIFAR-10 data directory.""")
+tf.app.flags.DEFINE_integer('dataset_window_size', 200,
+                            """"Window size of the original images""")
+tf.app.flags.DEFINE_integer('noise_crop_size', 160,
+                            """"noise crop size of the original images for distortion toleration""")
+
 
 # Process images of this size. Note that this differs from the original CIFAR
 # image size of 32 x 32. If one alters this number, then the entire model
 # architecture will change and any model would need to be retrained.
-IMAGE_SIZE = 24
+IMAGE_SIZE = FLAGS.noise_crop_size
 
 # Global constants describing the CIFAR-10 data set.
-NUM_CLASSES = 3 #era 10
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 24000 #era 50000
-NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 6000 #era 10000
+NUM_CLASSES = 4 #era 10
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 2400 #era 50000
+NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 668 #era 10000
 
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999     # era 0.9999The decay to use for the moving average.
@@ -164,7 +169,7 @@ def distorted_inputs():
   """
   filenames = [os.path.join(FLAGS.data_dir, 'acacia-10-batches-bin',
                             'data_batch_%d.bin' % i)
-               for i in xrange(0, 3)]
+               for i in xrange(1, 5)]
   for f in filenames:
     if not gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
@@ -287,7 +292,7 @@ def inference(images):
   #
   # conv1
   with tf.variable_scope('conv1') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[5, 5, 3, 64],
+    kernel = _variable_with_weight_decay('weights', shape=[12, 12, 3, 64], #era 5 5 3 64
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -319,7 +324,7 @@ def inference(images):
 
   # conv2
   with tf.variable_scope('conv2') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[5, 5, 64, 64],
+    kernel = _variable_with_weight_decay('weights', shape=[12, 12, 64, 64], #era 5 5 64 64
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(norm1, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.1))
