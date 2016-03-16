@@ -31,11 +31,11 @@ import cifar10_input
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('eval_dir', '/home/prtricardo/tensorflow_tmp/acacia10_eval',
+tf.app.flags.DEFINE_string('eval_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_eval',
                            """Directory where to write event logs.""")
 tf.app.flags.DEFINE_string('eval_data', 'test',
                            """Either 'test' or 'train_eval'.""")
-tf.app.flags.DEFINE_string('checkpoint_dir', '/home/prtricardo/tensorflow_tmp/acacia10_train',
+tf.app.flags.DEFINE_string('checkpoint_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_train',
                            """Directory where to read model checkpoints.""")
 tf.app.flags.DEFINE_integer('eval_interval_secs', 60 * 5,
                             """How often to run the eval.""")

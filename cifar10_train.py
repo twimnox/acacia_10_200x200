@@ -33,7 +33,7 @@ import cifar10
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/home/prtricardo/tensorflow_tmp/acacia10_train',
+tf.app.flags.DEFINE_string('train_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 1000000, #era 1000000

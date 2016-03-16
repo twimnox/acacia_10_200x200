@@ -37,7 +37,7 @@ FLAGS = tf.app.flags.FLAGS
 # Basic model parameters.
 tf.app.flags.DEFINE_integer('batch_size', 1, #era 128
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('data_dir', '/home/prtricardo/tensorflow_tmp/acacia10_data',
+tf.app.flags.DEFINE_string('data_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_data',
                            """Path to the CIFAR-10 data directory.""")
 
 # Process images of this size. Note that this differs from the original CIFAR

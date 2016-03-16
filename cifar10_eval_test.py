@@ -37,11 +37,11 @@ import cifar10_input
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('eval_dir', '/home/prtricardo/tensorflow_tmp/acacia10_eval',
+tf.app.flags.DEFINE_string('eval_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_eval',
                            """Directory where to write event logs.""")
 tf.app.flags.DEFINE_string('eval_data', 'test',
                            """Either 'test' or 'train_eval'.""")
-tf.app.flags.DEFINE_string('checkpoint_dir', '/home/prtricardo/tensorflow_tmp/acacia10_train',
+tf.app.flags.DEFINE_string('checkpoint_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_train',
                            """Directory where to read model checkpoints.""")
 tf.app.flags.DEFINE_integer('eval_interval_secs', 60 * 5,
                             """How often to run the eval.""")
@@ -49,7 +49,7 @@ tf.app.flags.DEFINE_integer('num_examples', 1, #era 10000
                             """Number of examples to run.""")
 tf.app.flags.DEFINE_boolean('run_once', False,
                          """Whether to run eval only once.""")
-tf.app.flags.DEFINE_string('test_dir', '/home/prtricardo/tensorflow_tmp/acacia10_test',
+tf.app.flags.DEFINE_string('test_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_test',
                            """Directory where to write event logs.""")
 tf.app.flags.DEFINE_string('test_file', 'mstar_test_batch.bin',
                            """Name of test file.""")
