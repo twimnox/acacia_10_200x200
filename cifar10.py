@@ -15,6 +15,7 @@ Summary of available functions:
  # Create a graph to run one step of training with respect to the loss.
  train_op = train(loss, global_step)
 """
+# I am not stable!
 # pylint: disable=missing-docstring
 import gzip
 import os
