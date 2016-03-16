@@ -83,7 +83,7 @@ def _activation_summary(x):
   """
   # Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
   # session. This helps the clarity of presentation on tensorboard.
-  tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name) # era [0-9]
+  tensor_name = re.sub('%s_[1-4]*/' % TOWER_NAME, '', x.op.name) # era [0-9]
   tf.histogram_summary(tensor_name + '/activations', x)
   tf.scalar_summary(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
 
@@ -169,7 +169,7 @@ def distorted_inputs():
   """
   filenames = [os.path.join(FLAGS.data_dir, 'acacia-10-batches-bin',
                             'data_batch_%d.bin' % i)
-               for i in xrange(1, 5)]
+               for i in xrange(0, 4)]
   for f in filenames:
     if not gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
@@ -292,7 +292,7 @@ def inference(images):
   #
   # conv1
   with tf.variable_scope('conv1') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[12, 12, 3, 64], #era 5 5 3 64
+    kernel = _variable_with_weight_decay('weights', shape=[15, 15, 3, 64], #era 5 5 3 64
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -300,18 +300,18 @@ def inference(images):
     conv1 = tf.nn.relu(bias, name=scope.name)
     _activation_summary(conv1)
 
-    with tf.variable_scope('visualization'):
-        # scale weights to [0 255] and convert to uint8 (maybe change scaling?)
-        x_min = tf.reduce_min(kernel)
-        x_max = tf.reduce_max(kernel)
-        kernel_0_to_1 = (kernel - x_min) / (x_max - x_min)
-        kernel_0_to_255_uint8 = tf.cast(kernel_0_to_1, dtype=tf.float32)#tf.image.convert_image_dtype(kernel_0_to_1, dtype=tf.uint8)
-
-        # to tf.image_summary format [batch_size, height, width, channels]
-        kernel_transposed = tf.transpose (kernel_0_to_255_uint8, [3, 0, 1, 2])
-
-        # this will display random 3 filters from the 64 in conv1
-        tf.image_summary('conv1/filters', kernel_transposed, max_images=3)
+    # with tf.variable_scope('visualization'):
+    #     # scale weights to [0 255] and convert to uint8 (maybe change scaling?)
+    #     x_min = tf.reduce_min(kernel)
+    #     x_max = tf.reduce_max(kernel)
+    #     kernel_0_to_1 = (kernel - x_min) / (x_max - x_min)
+    #     kernel_0_to_255_uint8 = tf.cast(kernel_0_to_1, dtype=tf.float32)#tf.image.convert_image_dtype(kernel_0_to_1, dtype=tf.uint8)
+    #
+    #     # to tf.image_summary format [batch_size, height, width, channels]
+    #     kernel_transposed = tf.transpose (kernel_0_to_255_uint8, [3, 0, 1, 2])
+    #
+    #     # this will display random 3 filters from the 64 in conv1
+    #     tf.image_summary('conv1/filters', kernel_transposed, max_images=3)
 
 
 
@@ -324,7 +324,7 @@ def inference(images):
 
   # conv2
   with tf.variable_scope('conv2') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[12, 12, 64, 64], #era 5 5 64 64
+    kernel = _variable_with_weight_decay('weights', shape=[15, 15, 64, 64], #era 5 5 64 64
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(norm1, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.1))
@@ -348,7 +348,7 @@ def inference(images):
     reshape = tf.reshape(pool2, [FLAGS.batch_size, dim])
 
     weights = _variable_with_weight_decay('weights', shape=[dim, 384],
-                                          stddev=0.04, wd=0.004) #era 0.04
+                                          stddev=0.04, wd=0.004) #wd era 0.04
     biases = _variable_on_cpu('biases', [384], tf.constant_initializer(0.1))
     local3 = tf.nn.relu_layer(reshape, weights, biases, name=scope.name)
     _activation_summary(local3)
@@ -356,7 +356,7 @@ def inference(images):
   # local4
   with tf.variable_scope('local4') as scope:
     weights = _variable_with_weight_decay('weights', shape=[384, 192],
-                                          stddev=0.04, wd=0.004) #era 0.04
+                                          stddev=0.04, wd=0.004) #wd era 0.04
     biases = _variable_on_cpu('biases', [192], tf.constant_initializer(0.1))
     local4 = tf.nn.relu_layer(local3, weights, biases, name=scope.name)
     _activation_summary(local4)

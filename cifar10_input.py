@@ -2,7 +2,9 @@
 
 import tensorflow.python.platform
 import tensorflow as tf
+import cifar10
 
+FLAGS = tf.app.flags.FLAGS
 
 def read_cifar10(filename_queue):
   """Reads and parses examples from CIFAR10 data files.

@@ -55,7 +55,7 @@ tf.app.flags.DEFINE_string('test_file', 'mstar_test_batch.bin',
                            """Name of test file.""")
 tf.app.flags.DEFINE_integer('image_size', 24,
                             """Size of image.""")
-tf.app.flags.DEFINE_integer('num_classes', 3,
+tf.app.flags.DEFINE_integer('num_classes', 4,
                             """Number of classes.""")
 tf.app.flags.DEFINE_integer('batch_size_here', 1,
                             """Number of images to process in a batch.""")
