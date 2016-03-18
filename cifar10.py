@@ -35,13 +35,13 @@ from tensorflow.python.platform import gfile
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 128, #era 128
+tf.app.flags.DEFINE_integer('batch_size', 16, #era 128
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('data_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_data',
                            """Path to the CIFAR-10 data directory.""")
 tf.app.flags.DEFINE_integer('dataset_window_size', 200,
                             """"Window size of the original images""")
-tf.app.flags.DEFINE_integer('noise_crop_size', 160,
+tf.app.flags.DEFINE_integer('noise_crop_size', 180,
                             """"noise crop size of the original images for distortion toleration""")
 
 
@@ -58,8 +58,8 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 668 #era 10000
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999     # era 0.9999The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 200   #era 350   # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.1  # era 0.1 Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.1 #era 0.1       # Initial learning rate.
+LEARNING_RATE_DECAY_FACTOR = 0.02  # era 0.1 Learning rate decay factor.
+INITIAL_LEARNING_RATE = 0.02 #era 0.1       # Initial learning rate.
 MIN_FRACTION_OF_EXAMPLES_QUEUE = 0.4
 
 # If a model is trained with multiple GPU's prefix all Op names with tower_name
@@ -83,7 +83,7 @@ def _activation_summary(x):
   """
   # Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
   # session. This helps the clarity of presentation on tensorboard.
-  tensor_name = re.sub('%s_[1-4]*/' % TOWER_NAME, '', x.op.name) # era [0-9]
+  tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name) # era [0-9]
   tf.histogram_summary(tensor_name + '/activations', x)
   tf.scalar_summary(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
 
@@ -196,9 +196,9 @@ def distorted_inputs():
   # Because these operations are not commutative, consider randomizing
   # randomize the order their operation.
   distorted_image = tf.image.random_brightness(distorted_image,
-                                               max_delta=40) #era 63
+                                               max_delta=20) #era 63
   distorted_image = tf.image.random_contrast(distorted_image,
-                                             lower=0.6, upper=1.2) #era 0.2 e 1.8
+                                             lower=0.7, upper=1.1) #era 0.2 e 1.8
 
   # distorted_image = reshaped_image
 
@@ -292,7 +292,7 @@ def inference(images):
   #
   # conv1
   with tf.variable_scope('conv1') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[15, 15, 3, 64], #era 5 5 3 64
+    kernel = _variable_with_weight_decay('weights', shape=[11, 11, 3, 64], #era 5 5 3 64
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -300,23 +300,23 @@ def inference(images):
     conv1 = tf.nn.relu(bias, name=scope.name)
     _activation_summary(conv1)
 
-    # with tf.variable_scope('visualization'):
-    #     # scale weights to [0 255] and convert to uint8 (maybe change scaling?)
-    #     x_min = tf.reduce_min(kernel)
-    #     x_max = tf.reduce_max(kernel)
-    #     kernel_0_to_1 = (kernel - x_min) / (x_max - x_min)
-    #     kernel_0_to_255_uint8 = tf.cast(kernel_0_to_1, dtype=tf.float32)#tf.image.convert_image_dtype(kernel_0_to_1, dtype=tf.uint8)
-    #
-    #     # to tf.image_summary format [batch_size, height, width, channels]
-    #     kernel_transposed = tf.transpose (kernel_0_to_255_uint8, [3, 0, 1, 2])
-    #
-    #     # this will display random 3 filters from the 64 in conv1
-    #     tf.image_summary('conv1/filters', kernel_transposed, max_images=3)
+    with tf.variable_scope('visualization'):
+        # scale weights to [0 255] and convert to uint8 (maybe change scaling?)
+        x_min = tf.reduce_min(kernel)
+        x_max = tf.reduce_max(kernel)
+        kernel_0_to_1 = (kernel - x_min) / (x_max - x_min)
+        kernel_0_to_255_uint8 = tf.cast(kernel_0_to_1, dtype=tf.float32)#tf.image.convert_image_dtype(kernel_0_to_1, dtype=tf.uint8)
+
+        # to tf.image_summary format [batch_size, height, width, channels]
+        kernel_transposed = tf.transpose (kernel_0_to_255_uint8, [3, 0, 1, 2])
+
+        # this will display random 3 filters from the 64 in conv1
+        tf.image_summary('conv1/filters', kernel_transposed, max_images=3)
 
 
 
   # pool1
-  pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+  pool1 = tf.nn.max_pool(conv1, ksize=[1, 5, 5, 1], strides=[1, 4, 4, 1],
                          padding='SAME', name='pool1')
   # norm1
   norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
@@ -336,8 +336,8 @@ def inference(images):
   norm2 = tf.nn.lrn(conv2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
                     name='norm2')
   # pool2
-  pool2 = tf.nn.max_pool(norm2, ksize=[1, 3, 3, 1],
-                         strides=[1, 2, 2, 1], padding='SAME', name='pool2')
+  pool2 = tf.nn.max_pool(norm2, ksize=[1, 13, 13, 1],
+                         strides=[1, 4, 4, 1], padding='SAME', name='pool2')
 
   # local3
   with tf.variable_scope('local3') as scope:
