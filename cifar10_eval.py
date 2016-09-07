@@ -39,7 +39,7 @@ tf.app.flags.DEFINE_string('checkpoint_dir', '/home/prtricardo/tensorflow_tmp/20
                            """Directory where to read model checkpoints.""")
 tf.app.flags.DEFINE_integer('eval_interval_secs', 60 * 5,
                             """How often to run the eval.""")
-tf.app.flags.DEFINE_integer('num_examples', 668, #era 10000
+tf.app.flags.DEFINE_integer('num_examples', 7400, #era 10000
                             """Number of examples to run.""")
 tf.app.flags.DEFINE_boolean('run_once', False,
                          """Whether to run eval only once.""")

@@ -35,13 +35,13 @@ from tensorflow.python.platform import gfile
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 16, #era 128
+tf.app.flags.DEFINE_integer('batch_size', 64, #era 128
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('data_dir', '/home/prtricardo/tensorflow_tmp/200x200_models/acacia10_data',
                            """Path to the CIFAR-10 data directory.""")
-tf.app.flags.DEFINE_integer('dataset_window_size', 200,
+tf.app.flags.DEFINE_integer('dataset_window_size', 100, #era 200
                             """"Window size of the original images""")
-tf.app.flags.DEFINE_integer('noise_crop_size', 180,
+tf.app.flags.DEFINE_integer('noise_crop_size', 90, #era 180
                             """"noise crop size of the original images for distortion toleration""")
 
 
@@ -51,13 +51,13 @@ tf.app.flags.DEFINE_integer('noise_crop_size', 180,
 IMAGE_SIZE = FLAGS.noise_crop_size
 
 # Global constants describing the CIFAR-10 data set.
-NUM_CLASSES = 4 #era 10
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 2400 #era 50000
-NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 668 #era 10000
+NUM_CLASSES = 9 #era 10
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 21410 #era 50000
+NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 7400 #era 10000
 
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999     # era 0.9999The decay to use for the moving average.
-NUM_EPOCHS_PER_DECAY = 120   #era 350   # Epochs after which learning rate decays.
+NUM_EPOCHS_PER_DECAY = 40   #era 350   # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.05  # era 0.1 Learning rate decay factor.
 INITIAL_LEARNING_RATE = 0.05 #era 0.1       # Initial learning rate.
 MIN_FRACTION_OF_EXAMPLES_QUEUE = 0.4
@@ -68,6 +68,52 @@ MIN_FRACTION_OF_EXAMPLES_QUEUE = 0.4
 TOWER_NAME = 'tower'
 
 DATA_URL = 'http://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
+
+
+def put_kernels_on_grid (kernel, (grid_Y, grid_X), pad=1):
+    '''Visualize conv. features as an image (mostly for the 1st layer).
+    Place kernel into a grid, with some paddings between adjacent filters.
+    Args:
+      kernel:            tensor of shape [Y, X, NumChannels, NumKernels]
+      (grid_Y, grid_X):  shape of the grid. Require: NumKernels == grid_Y * grid_X
+                           User is responsible of how to break into two multiples.
+      pad:               number of black pixels around each filter (between them)
+
+    Return:
+      Tensor of shape [(Y+pad)*grid_Y, (X+pad)*grid_X, NumChannels, 1].
+    '''
+    # pad X and Y
+    x1 = tf.pad(kernel, tf.constant( [[pad,0],[pad,0],[0,0],[0,0]] ))
+
+    # X and Y dimensions, w.r.t. padding
+    Y = kernel.get_shape()[0] + pad
+    X = kernel.get_shape()[1] + pad
+
+    # put NumKernels to the 1st dimension
+    x2 = tf.transpose(x1, (3, 0, 1, 2))
+    # organize grid on Y axis
+    x3 = tf.reshape(x2, tf.pack([grid_X, Y * grid_Y, X, 3]))
+
+    # switch X and Y axes
+    x4 = tf.transpose(x3, (0, 2, 1, 3))
+    # organize grid on X axis
+    x5 = tf.reshape(x4, tf.pack([1, X * grid_X, Y * grid_Y, 3]))
+
+    # back to normal order (not combining with the next step for clarity)
+    x6 = tf.transpose(x5, (2, 1, 3, 0))
+
+    # to tf.image_summary order [batch_size, height, width, channels],
+    #   where in this case batch_size == 1
+    x7 = tf.transpose(x6, (3, 0, 1, 2))
+
+    # scale to [0, 1]
+    x_min = tf.reduce_min(x7)
+    x_max = tf.reduce_max(x7)
+    x8 = (x7 - x_min) / (x_max - x_min)
+
+    # scale to [0, 255] and convert to uint8
+    return tf.image.convert_image_dtype(x8, dtype=tf.uint8)
+
 
 
 def _activation_summary(x):
@@ -169,8 +215,9 @@ def distorted_inputs():
   """
   filenames = [os.path.join(FLAGS.data_dir, 'acacia-10-batches-bin',
                             'data_batch_%d.bin' % i)
-               for i in xrange(0, 4)]
+               for i in xrange(0, 8+1)]
   for f in filenames:
+    print "opening file", f
     if not gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
 
@@ -196,9 +243,9 @@ def distorted_inputs():
   # Because these operations are not commutative, consider randomizing
   # randomize the order their operation.
   distorted_image = tf.image.random_brightness(distorted_image,
-                                               max_delta=20) #era 63
+                                               max_delta=20) #era 63* 20
   distorted_image = tf.image.random_contrast(distorted_image,
-                                             lower=0.7, upper=1.1) #era 0.2 e 1.8
+                                             lower=0.7, upper=1.1) #era 0.2 e 1.8* 0.7 1.1
 
   # distorted_image = reshaped_image
 
@@ -237,7 +284,7 @@ def inputs(eval_data):
   if not eval_data:
     filenames = [os.path.join(FLAGS.data_dir, 'acacia-10-batches-bin',
                               'data_batch_%d.bin' % i)
-                 for i in xrange(0, 3)]
+                 for i in xrange(0, 8+1)]
     num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
   else:
     filenames = [os.path.join(FLAGS.data_dir, 'acacia-10-batches-bin',
@@ -292,7 +339,7 @@ def inference(images):
   #
   # conv1
   with tf.variable_scope('conv1') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[11, 11, 3, 64], #era 5 5 3 64
+    kernel = _variable_with_weight_decay('weights', shape=[7, 7, 3, 64], #era 5 5 3 64, 11 11 3 64
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -300,6 +347,7 @@ def inference(images):
     conv1 = tf.nn.relu(bias, name=scope.name)
     _activation_summary(conv1)
 
+    #visualize 3 random filters from conv layer 1
     with tf.variable_scope('visualization'):
         # scale weights to [0 255] and convert to uint8 (maybe change scaling?)
         x_min = tf.reduce_min(kernel)
@@ -314,9 +362,19 @@ def inference(images):
         tf.image_summary('conv1/filters', kernel_transposed, max_images=3)
 
 
+    # # Visualize conv1 features
+    # with tf.variable_scope('conv1') as scope_conv:
+    #     #tf.get_variable_scope().reuse_variables()
+    #     scope_conv.reuse_variables()
+    #     weights = tf.get_variable('weights')
+    #     grid_x = grid_y = 8   # to get a square grid for 64 conv1 features
+    #     grid = put_kernels_on_grid (weights, (grid_y, grid_x))
+    #     tf.image_summary('conv1/features', grid, max_images=1)
+
+
 
   # pool1
-  pool1 = tf.nn.max_pool(conv1, ksize=[1, 5, 5, 1], strides=[1, 4, 4, 1],
+  pool1 = tf.nn.max_pool(conv1, ksize=[1, 5, 5, 1], strides=[1, 4, 4, 1], #era  k= 1,5,5,1 e strides= 1,4,4,1
                          padding='SAME', name='pool1')
   # norm1
   norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
@@ -324,7 +382,7 @@ def inference(images):
 
   # conv2
   with tf.variable_scope('conv2') as scope:
-    kernel = _variable_with_weight_decay('weights', shape=[15, 15, 64, 64], #era 5 5 64 64
+    kernel = _variable_with_weight_decay('weights', shape=[5, 5, 64, 64], #era 5 5 64 64, 15, 15, 64, 64
                                          stddev=1e-4, wd=0.0)
     conv = tf.nn.conv2d(norm1, kernel, [1, 1, 1, 1], padding='SAME')
     biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.1))
@@ -336,34 +394,36 @@ def inference(images):
   norm2 = tf.nn.lrn(conv2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
                     name='norm2')
   # pool2
-  pool2 = tf.nn.max_pool(norm2, ksize=[1, 13, 13, 1],
+  pool2 = tf.nn.max_pool(norm2, ksize=[1, 10, 10, 1], #era 1,13,13,1
                          strides=[1, 4, 4, 1], padding='SAME', name='pool2')
 
   # local3
   with tf.variable_scope('local3') as scope:
+    l3_size = 384
     # Move everything into depth so we can perform a single matrix multiply.
     dim = 1
     for d in pool2.get_shape()[1:].as_list():
       dim *= d
     reshape = tf.reshape(pool2, [FLAGS.batch_size, dim])
 
-    weights = _variable_with_weight_decay('weights', shape=[dim, 192], #era 384
-                                          stddev=0.04, wd=0.004) #wd era 0.04
-    biases = _variable_on_cpu('biases', [192], tf.constant_initializer(0.1)) #era 384
+    weights = _variable_with_weight_decay('weights', shape=[dim,  l3_size], #era 384
+                                          stddev=0.04, wd=0.04) #wd era 0.04
+    biases = _variable_on_cpu('biases', [l3_size], tf.constant_initializer(0.1)) #era 384
     local3 = tf.nn.relu_layer(reshape, weights, biases, name=scope.name)
     _activation_summary(local3)
 
   # local4
   with tf.variable_scope('local4') as scope:
-    weights = _variable_with_weight_decay('weights', shape=[192, 78], #era 384, 192
-                                          stddev=0.04, wd=0.004) #wd era 0.04
-    biases = _variable_on_cpu('biases', [78], tf.constant_initializer(0.1)) #era 192
+    l4_size = 192
+    weights = _variable_with_weight_decay('weights', shape=[l3_size, l4_size], #era 384, 192
+                                          stddev=0.04, wd=0.04) #wd era 0.04
+    biases = _variable_on_cpu('biases', [l4_size], tf.constant_initializer(0.1)) #era 192
     local4 = tf.nn.relu_layer(local3, weights, biases, name=scope.name)
     _activation_summary(local4)
 
   # softmax, i.e. softmax(WX + b)
   with tf.variable_scope('softmax_linear') as scope:
-    weights = _variable_with_weight_decay('weights', [78, NUM_CLASSES], #era 192
+    weights = _variable_with_weight_decay('weights', [l4_size, NUM_CLASSES], #era 192
                                           stddev=1/192.0, wd=0.0)
     biases = _variable_on_cpu('biases', [NUM_CLASSES],
                               tf.constant_initializer(0.0))
