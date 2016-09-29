@@ -57,7 +57,7 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 7400 #era 10000
 
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999     # era 0.9999The decay to use for the moving average.
-NUM_EPOCHS_PER_DECAY = 40   #era 350   # Epochs after which learning rate decays.
+NUM_EPOCHS_PER_DECAY = 60   #era 350   # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.05  # era 0.1 Learning rate decay factor.
 INITIAL_LEARNING_RATE = 0.05 #era 0.1       # Initial learning rate.
 MIN_FRACTION_OF_EXAMPLES_QUEUE = 0.4
@@ -111,8 +111,7 @@ def put_kernels_on_grid (kernel, (grid_Y, grid_X), pad=1):
     x_max = tf.reduce_max(x7)
     x8 = (x7 - x_min) / (x_max - x_min)
 
-    # scale to [0, 255] and convert to uint8
-    return tf.image.convert_image_dtype(x8, dtype=tf.uint8)
+    return x8
 
 
 
@@ -359,17 +358,17 @@ def inference(images):
         kernel_transposed = tf.transpose (kernel_0_to_255_uint8, [3, 0, 1, 2])
 
         # this will display random 3 filters from the 64 in conv1
-        tf.image_summary('conv1/filters', kernel_transposed, max_images=3)
+        tf.image_summary('conv1/filters', kernel_transposed, max_images=64)
 
 
-    # # Visualize conv1 features
-    # with tf.variable_scope('conv1') as scope_conv:
-    #     #tf.get_variable_scope().reuse_variables()
-    #     scope_conv.reuse_variables()
-    #     weights = tf.get_variable('weights')
-    #     grid_x = grid_y = 8   # to get a square grid for 64 conv1 features
-    #     grid = put_kernels_on_grid (weights, (grid_y, grid_x))
-    #     tf.image_summary('conv1/features', grid, max_images=1)
+    # Visualize conv1 features
+  with tf.variable_scope('conv1') as scope_conv:
+   tf.get_variable_scope().reuse_variables()
+   weights = tf.get_variable('weights')
+   grid_x = grid_y = 8   # to get a square grid for 64 conv1 features
+   grid = put_kernels_on_grid (weights, (grid_y, grid_x))
+   tf.image_summary('conv1/features', grid, max_images=1)
+
 
 
 
